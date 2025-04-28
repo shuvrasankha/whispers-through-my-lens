@@ -12,13 +12,16 @@ export default function PhotoCard({ photo }) {
       href={`/photo/${photo.id}`}
       className="block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 cursor-pointer"
     >
-      <div className="relative h-64 p-2 bg-white">
+      <div className="relative h-48 sm:h-64 p-2 bg-white">
         <div className="h-full w-full border-4 border-white shadow-inner overflow-hidden rounded-lg">
           {photo.image_url && !imageError ? (
-            <img
+            <Image
               src={photo.image_url}
               alt={photo.image_name}
-              className="w-full h-full object-cover rounded-md"
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+              className="object-cover rounded-md"
+              unoptimized={photo.image_url.startsWith('http')}
               onError={(e) => {
                 console.error("Image load error:", e);
                 setImageError(true);
@@ -26,18 +29,18 @@ export default function PhotoCard({ photo }) {
             />
           ) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center rounded-md">
-              <span className="text-gray-400">No image available</span>
+              <span className="text-gray-400 text-sm sm:text-base">No image available</span>
             </div>
           )}
         </div>
       </div>
       
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">{photo.image_name}</h3>
-        <p className="text-gray-600 mb-3 line-clamp-2">{photo.image_story}</p>
+      <div className="p-3 sm:p-4">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1 sm:mb-2">{photo.image_name}</h3>
+        <p className="text-sm sm:text-base text-gray-600 mb-2 sm:mb-3 line-clamp-2">{photo.image_story}</p>
         
         <div className="flex items-center">
-          <span className="text-sm text-gray-500">
+          <span className="text-xs sm:text-sm text-gray-500">
             {new Date(photo.created_at).toLocaleDateString()}
           </span>
         </div>

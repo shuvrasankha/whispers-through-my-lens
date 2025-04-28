@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
@@ -18,6 +18,9 @@ export default function PhotoDetailPage() {
   const [error, setError] = useState(null)
   const [relatedPhotos, setRelatedPhotos] = useState([])
   const [imageError, setImageError] = useState(false)
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 })
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const imageRef = useRef(null)
 
   useEffect(() => {
     const fetchPhoto = async () => {
@@ -216,20 +219,54 @@ export default function PhotoDetailPage() {
         <div className="max-w-6xl mx-auto">
           {/* Single card containing image and details */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-16">
-            {/* Image section - fixed padding on all sides */}
-            <div className="w-full relative p-8 bg-white flex justify-center">
+            {/* Image section - dynamic sizing based on image dimensions */}
+            <div className="w-full relative bg-white flex justify-center">
               {displayPhoto.image_url && !imageError ? (
-                <img
-                  src={displayPhoto.image_url}
-                  alt={displayPhoto.image_name}
-                  className="max-w-full max-h-[50vh] object-contain"
-                  onError={() => {
-                    setImageError(true);
-                    console.error(`Failed to load main image for photo ID: ${displayPhoto.id}`);
-                  }}
-                />
+                <div 
+                  className={`p-8 ${
+                    imageDimensions.width > imageDimensions.height * 1.2 
+                      ? 'w-full' 
+                      : imageDimensions.height > imageDimensions.width * 1.2 
+                        ? 'max-w-xl mx-auto' 
+                        : 'max-w-3xl mx-auto'
+                  } transition-all duration-300 ${!imageLoaded ? 'opacity-0' : 'opacity-100'}`}
+                >
+                  <img
+                    ref={imageRef}
+                    src={displayPhoto.image_url}
+                    alt={displayPhoto.image_name}
+                    className={`max-w-full ${
+                      // Adjust height constraints based on aspect ratio
+                      imageDimensions.width > imageDimensions.height * 1.5 
+                        ? 'max-h-[70vh]' // Very wide landscape
+                        : imageDimensions.height > imageDimensions.width * 1.5 
+                          ? 'max-h-[85vh]' // Very tall portrait
+                          : 'max-h-[65vh]' // Balanced aspect
+                    } object-contain shadow-sm rounded`}
+                    onLoad={(e) => {
+                      const img = e.target;
+                      setImageDimensions({
+                        width: img.naturalWidth,
+                        height: img.naturalHeight
+                      });
+                      setImageLoaded(true);
+                      console.log(`Image loaded with dimensions: ${img.naturalWidth}x${img.naturalHeight}`);
+                    }}
+                    onError={() => {
+                      setImageError(true);
+                      console.error(`Failed to load main image for photo ID: ${displayPhoto.id}`);
+                    }}
+                  />
+                  
+                  {/* Dimensions display for large screens */}
+                  {imageLoaded && imageDimensions.width > 0 && (
+                    <div className="mt-2 text-xs text-gray-500 text-center hidden sm:block">
+                      {imageDimensions.width} × {imageDimensions.height} px
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="w-full h-[50vh] bg-gray-100 flex flex-col items-center justify-center">
+                <div className="w-full min-h-[40vh] md:min-h-[50vh] bg-gray-100 flex flex-col items-center justify-center p-8">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
@@ -348,12 +385,31 @@ export default function PhotoDetailPage() {
                 {displayRelatedPhotos.map((relatedPhoto) => (
                   <Link key={relatedPhoto.id} href={`/photo/${relatedPhoto.id}`} className="block">
                     <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
-                      <div className="relative h-52 overflow-hidden">
+                      <div className="relative overflow-hidden" style={{ minHeight: '200px' }}>
                         {(relatedPhoto.image_thumbnail_url || relatedPhoto.image_url) ? (
                           <img
                             src={relatedPhoto.image_thumbnail_url || relatedPhoto.image_url}
                             alt={relatedPhoto.image_name}
                             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+                            style={{ aspectRatio: 'auto' }}
+                            onLoad={(e) => {
+                              // Dynamically adjust container height based on aspect ratio
+                              const img = e.target;
+                              const aspectRatio = img.naturalWidth / img.naturalHeight;
+                              
+                              // For landscape images, limit height
+                              if (aspectRatio > 1.3) {
+                                e.target.parentElement.style.height = '220px';
+                              } 
+                              // For portrait images, give more height
+                              else if (aspectRatio < 0.8) {
+                                e.target.parentElement.style.height = '300px';
+                              }
+                              // For square-ish images
+                              else {
+                                e.target.parentElement.style.height = '250px';
+                              }
+                            }}
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.parentElement.innerHTML = '<div class="w-full h-full bg-gray-200 flex items-center justify-center"><span class="text-gray-400">No image available</span></div>';
