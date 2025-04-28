@@ -60,10 +60,15 @@ export default function Gallery() {
         let query = supabase
           .from('image_details')
           .select('*')
-          .order('created_at', { ascending: false })
         
-        if (filter !== 'all') {
+        // Apply ordering based on filter
+        if (filter === 'all') {
+          // For "All Categories" apply random ordering
+          query = query.order('id', { ascending: false }) // Fetch all photos
+        } else {
+          // For specific categories, maintain chronological order
           query = query.eq('image_type', filter)
+            .order('created_at', { ascending: false })
         }
         
         const { data, error } = await query
@@ -72,7 +77,18 @@ export default function Gallery() {
           throw error
         }
         
-        setPhotos(data || [])
+        // If "All Categories" is selected, shuffle the results for random display
+        if (filter === 'all' && data) {
+          // Fisher-Yates shuffle algorithm
+          const shuffled = [...data]
+          for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+            ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+          }
+          setPhotos(shuffled)
+        } else {
+          setPhotos(data || [])
+        }
       } catch (error) {
         setError('Failed to load photos. Please try again later.')
         console.error('Error fetching photos:', error)

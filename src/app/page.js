@@ -48,14 +48,30 @@ export default function Home() {
           .from('image_details')
           .select('*')
           .eq('feature_flag', true)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(50); // Fetching more photos to randomize from
         
         if (error) {
           throw error;
         }
         
-        // If data is available, use it; otherwise use fallback photos
-        setFeaturedPhotos(data?.length > 0 ? data : fallbackPhotos);
+        let photosToShow = [];
+        
+        if (data?.length > 0) {
+          // If we have more than 6 photos, randomly select 6
+          if (data.length > 6) {
+            // Shuffle the array and take the first 6 items
+            photosToShow = [...data].sort(() => 0.5 - Math.random()).slice(0, 6);
+          } else {
+            // If we have 6 or fewer photos, use all of them
+            photosToShow = data;
+          }
+        } else {
+          // Use fallback photos if no data is available
+          photosToShow = fallbackPhotos;
+        }
+        
+        setFeaturedPhotos(photosToShow);
 
       } catch (err) {
         console.error('Error fetching featured photos:', err);
