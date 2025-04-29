@@ -43,40 +43,20 @@ export default function Home() {
       try {
         setLoading(true);
         
-        // Query the image_details table for photos with feature_flag = true
         const { data, error } = await supabase
           .from('image_details')
           .select('*')
           .eq('feature_flag', true)
           .order('created_at', { ascending: false })
-          .limit(50); // Fetching more photos to randomize from
+          .limit(6); // Reduced from 50 to 6 since we only need 6 photos max
         
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
         
-        let photosToShow = [];
-        
-        if (data?.length > 0) {
-          // If we have more than 6 photos, randomly select 6
-          if (data.length > 6) {
-            // Shuffle the array and take the first 6 items
-            photosToShow = [...data].sort(() => 0.5 - Math.random()).slice(0, 6);
-          } else {
-            // If we have 6 or fewer photos, use all of them
-            photosToShow = data;
-          }
-        } else {
-          // Use fallback photos if no data is available
-          photosToShow = fallbackPhotos;
-        }
-        
-        setFeaturedPhotos(photosToShow);
-
+        setFeaturedPhotos(data?.length > 0 ? data : fallbackPhotos);
       } catch (err) {
         console.error('Error fetching featured photos:', err);
         setError(err.message);
-        setFeaturedPhotos(fallbackPhotos); // Use fallback photos if there's an error
+        setFeaturedPhotos(fallbackPhotos);
       } finally {
         setLoading(false);
       }
@@ -84,6 +64,19 @@ export default function Home() {
     
     fetchFeaturedPhotos();
   }, []);
+
+  // Skeleton loader for featured photos
+  const PhotoSkeleton = () => (
+    <div className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 animate-pulse">
+      <div className="h-48 sm:h-64 bg-gray-200"></div>
+      <div className="p-4 sm:p-6">
+        <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-2/3 mb-4"></div>
+        <div className="h-8 bg-gray-200 rounded-lg w-1/3"></div>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -137,8 +130,15 @@ export default function Home() {
             </div>
             
             {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <Loader />
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
+                  {[...Array(6)].map((_, index) => (
+                    <PhotoSkeleton key={index} />
+                  ))}
+                </div>
+                <div className="flex justify-center items-center mt-8">
+                  <Loader />
+                </div>
               </div>
             ) : error ? (
               <div className="text-center text-red-600 py-8">
@@ -188,6 +188,16 @@ export default function Home() {
           </div>
         </section>
       </main>
+      
+      {/* Inspirational Quote Section */}
+      <section className="py-6 bg-white">
+        <div className="max-w-4xl mx-auto px-4 text-center animate-[fadeIn_1.5s_ease-in]">
+          <p className="text-gray-600 italic text-lg md:text-xl leading-relaxed">
+            "Every moment, no matter how small, carries its own story. Keep looking closer, keep feeling deeper — the world has so much more to offer when you see it through an open heart."
+          </p>
+        </div>
+      </section>
+      
       <Footer />
     </>
   )

@@ -1,26 +1,93 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
-import Loader from '@/components/Loader'
 import { supabase } from '@/lib/supabaseClient'
 
+// Util function for formatting dates - moved outside component
+const formatDate = (dateString) => {
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return new Date(dateString).toLocaleDateString(undefined, options);
+};
+
+// Component for displaying the skeleton loading state
+const PhotoDetailSkeleton = () => (
+  <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-white">
+    <div className="max-w-6xl mx-auto">
+      <div className="bg-white rounded-xl shadow-md overflow-hidden mb-16 animate-pulse">
+        {/* Image skeleton */}
+        <div className="w-full h-[60vh] bg-gray-200 flex justify-center items-center p-8">
+          <div className="w-16 h-16 rounded-full border-4 border-gray-300 border-t-gray-500 animate-spin"></div>
+        </div>
+        
+        {/* Content skeleton */}
+        <div className="p-6 md:p-10 border-t border-gray-100">
+          <div className="h-10 bg-gray-200 rounded w-3/4 mb-6"></div>
+          
+          <div className="flex flex-wrap mb-8">
+            <div className="h-6 bg-gray-200 rounded w-32 mr-8 mb-3"></div>
+            <div className="h-6 bg-gray-200 rounded w-28 mr-8 mb-3"></div>
+            <div className="h-6 bg-gray-200 rounded w-40 mb-3"></div>
+          </div>
+          
+          <div className="space-y-4 mb-12">
+            <div className="h-5 bg-gray-200 rounded w-full"></div>
+            <div className="h-5 bg-gray-200 rounded w-full"></div>
+            <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-5 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-5 bg-gray-200 rounded w-full"></div>
+            <div className="h-5 bg-gray-200 rounded w-4/5"></div>
+          </div>
+          
+          <div className="bg-gray-50 rounded-lg p-6">
+            <div className="h-7 bg-gray-200 rounded w-48 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-start">
+                  <div className="w-10 h-10 bg-gray-200 rounded-md mr-3"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-16"></div>
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Related photos skeleton */}
+      <div className="mt-16">
+        <div className="h-8 bg-gray-200 rounded w-48 mb-6"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="bg-white rounded-xl overflow-hidden shadow-sm h-full animate-pulse">
+              <div className="bg-gray-200 h-48"></div>
+              <div className="p-5">
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6 mb-4"></div>
+                <div className="h-5 bg-gray-200 rounded w-24 mt-4"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function PhotoDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const { id } = params
+  const { id } = useParams()
   
   const [photo, setPhoto] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [relatedPhotos, setRelatedPhotos] = useState([])
   const [imageError, setImageError] = useState(false)
-  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 })
-  const [imageLoaded, setImageLoaded] = useState(false)
-  const imageRef = useRef(null)
 
   useEffect(() => {
     const fetchPhoto = async () => {
@@ -33,16 +100,12 @@ export default function PhotoDetailPage() {
           .eq('id', id)
           .single()
         
-        if (error) {
-          throw error
-        }
+        if (error) throw error
         
         if (data) {
-          console.log('Loaded photo:', data); // Debug info
           setPhoto(data)
-          
-          // Fetch related photos based on tags/keywords
-          await fetchRelatedPhotos(data);
+          // Fetch related photos
+          fetchRelatedPhotos(data)
         }
       } catch (error) {
         console.error('Error fetching photo:', error)
@@ -52,135 +115,72 @@ export default function PhotoDetailPage() {
       }
     }
     
-    // Function to fetch related photos with similar tags/attributes
     const fetchRelatedPhotos = async (currentPhoto) => {
+      if (!currentPhoto) return
+      
       try {
-        if (!currentPhoto) return;
-        
-        // Extract potential keywords from the photo's name and story
-        const photoText = `${currentPhoto.image_name} ${currentPhoto.image_story}`.toLowerCase();
+        // Extract keywords from the photo's name and story for matching
+        const photoText = `${currentPhoto.image_name} ${currentPhoto.image_story || ''}`.toLowerCase()
         const keywords = photoText.split(/\s+/)
-          .filter(word => word.length > 3) // Filter out short words
-          .filter(word => !['this', 'that', 'with', 'from', 'have', 'been', 'were', 'they', 'their'].includes(word));
+          .filter(word => word.length > 3)
+          .filter(word => !['this', 'that', 'with', 'from', 'have', 'been', 'were', 'they', 'their'].includes(word))
         
-        // Build a query for photos with similar attributes
-        let query = supabase
+        // Query for photos with the same image type
+        const { data, error } = await supabase
           .from('image_details')
           .select('*')
-          .neq('id', id); // Exclude current photo
+          .eq('image_type', currentPhoto.image_type)
+          .neq('id', id)
+          .limit(10)
         
-        // First priority: match the image_type
-        if (currentPhoto.image_type) {
-          query = query.eq('image_type', currentPhoto.image_type);
-        }
+        if (error) throw error
         
-        // Get all photos that match primary criteria
-        let { data: matchingPhotos, error } = await query.limit(20);
-        
-        if (error) {
-          console.error('Error fetching similar photos:', error);
-          return;
-        }
-        
-        // Score and rank the matching photos based on content similarity
-        if (matchingPhotos && matchingPhotos.length > 0) {
-          const scoredPhotos = matchingPhotos.map(photo => {
-            const photoContent = `${photo.image_name} ${photo.image_story || ''}`.toLowerCase();
+        if (data && data.length > 0) {
+          // Score photos based on content similarity
+          const scoredPhotos = data.map(photo => {
+            const photoContent = `${photo.image_name} ${photo.image_story || ''}`.toLowerCase()
             
-            // Calculate relevance score based on matching keywords
-            let relevanceScore = 0;
+            // Calculate relevance score
+            let relevanceScore = 0
             keywords.forEach(keyword => {
               if (photoContent.includes(keyword)) {
-                relevanceScore += 1;
+                relevanceScore += 1
               }
-            });
+            })
             
             // Boost score for photos with matching location
             if (currentPhoto.location && photo.location === currentPhoto.location) {
-              relevanceScore += 3;
+              relevanceScore += 3
             }
             
-            return {
-              ...photo,
-              relevanceScore
-            };
-          });
+            return { ...photo, relevanceScore }
+          })
           
-          // Sort by relevance score (descending) and take top results
-          const sortedPhotos = scoredPhotos
+          // Get the top 3 most relevant photos
+          const relatedResults = scoredPhotos
             .sort((a, b) => b.relevanceScore - a.relevanceScore)
-            .slice(0, 3);
+            .slice(0, 3)
           
-          console.log('Loaded related photos:', sortedPhotos.length); // Debug info
-          setRelatedPhotos(sortedPhotos);
+          setRelatedPhotos(relatedResults)
         }
       } catch (error) {
-        console.error('Error processing related photos:', error);
+        console.error('Error fetching related photos:', error)
       }
-    };
+    }
     
     if (id) {
       fetchPhoto()
     }
   }, [id])
 
-  // For demo purposes, create a placeholder photo
-  const placeholderPhoto = {
-    id: id,
-    image_name: 'Mountain Sunset',
-    image_story: 'A breathtaking sunset over the mountain ranges. The warm glow of the setting sun paints the sky in vibrant hues of orange, pink, and purple, casting a magical light over the rugged mountain peaks. The silhouettes of the mountains stand in stark contrast against the colorful sky, creating a scene of both serenity and grandeur. This photograph captures the fleeting moment when day transitions to night, a reminder of nature\'s ephemeral beauty and the constant cycle of change.',
-    image_url: 'https://source.unsplash.com/random/1200x800/?mountain',
-    image_thumbnail_url: 'https://source.unsplash.com/random/600x400/?mountain',
-    image_type: 'landscape',
-    created_at: '2025-04-25T00:00:00Z',
-    location: 'Rocky Mountains, Colorado',
-    camera: 'Canon EOS R5',
-    lens: 'Canon RF 24-70mm f/2.8L IS USM',
-    settings: 'f/11, 1/60s, ISO 100',
-  }
-
-  const placeholderRelatedPhotos = [
-    {
-      id: 101,
-      image_name: 'Alpine Lake Reflection',
-      image_story: 'Crystal clear alpine lake with perfect mountain reflections.',
-      image_url: 'https://source.unsplash.com/random/800x600/?lake',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?lake',
-      image_type: 'landscape',
-      created_at: '2025-04-23T00:00:00Z'
-    },
-    {
-      id: 102,
-      image_name: 'Misty Valley',
-      image_story: 'Morning mist filling a valley at sunrise.',
-      image_url: 'https://source.unsplash.com/random/800x600/?valley',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?valley',
-      image_type: 'landscape',
-      created_at: '2025-04-21T00:00:00Z'
-    },
-    {
-      id: 103,
-      image_name: 'Desert Dunes',
-      image_story: 'Golden sand dunes at sunset with dramatic shadows.',
-      image_url: 'https://source.unsplash.com/random/800x600/?dunes',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?dunes',
-      image_type: 'landscape',
-      created_at: '2025-04-19T00:00:00Z'
-    }
-  ]
-
-  const displayPhoto = photo || placeholderPhoto
-  // Only show related photos if we have actual related photos from the database, not placeholders
+  // Only show related photos if we actually have some
   const hasRelatedPhotos = relatedPhotos.length > 0
-  const displayRelatedPhotos = hasRelatedPhotos ? relatedPhotos : placeholderRelatedPhotos
 
   if (loading) {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen flex items-center justify-center bg-white">
-          <Loader />
-        </div>
+        <PhotoDetailSkeleton />
         <Footer />
       </>
     )
@@ -207,11 +207,6 @@ export default function PhotoDetailPage() {
     )
   }
 
-  const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
-  };
-
   return (
     <>
       <Navbar />
@@ -219,26 +214,15 @@ export default function PhotoDetailPage() {
         <div className="max-w-6xl mx-auto">
           {/* Single card containing image and details */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-16">
-            {/* Image section - redesigned with a cleaner look */}
+            {/* Image section */}
             <div className="w-full relative bg-gray-50 overflow-hidden">
-              {displayPhoto.image_url && !imageError ? (
+              {photo.image_url && !imageError ? (
                 <div className="flex justify-center items-center py-10 px-4 md:px-8">
                   <img
-                    ref={imageRef}
-                    src={displayPhoto.image_url}
-                    alt={displayPhoto.image_name}
+                    src={photo.image_url}
+                    alt={photo.image_name}
                     className="max-w-full max-h-[80vh] object-contain shadow-md rounded"
-                    onLoad={(e) => {
-                      const img = e.target;
-                      setImageDimensions({
-                        width: img.naturalWidth,
-                        height: img.naturalHeight
-                      });
-                      setImageLoaded(true);
-                    }}
-                    onError={() => {
-                      setImageError(true);
-                    }}
+                    onError={() => setImageError(true)}
                   />
                 </div>
               ) : (
@@ -247,49 +231,49 @@ export default function PhotoDetailPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <p className="text-base text-gray-500 mt-4">
-                    {displayPhoto.image_url ? "Image failed to load" : "No image available"}
+                    {photo.image_url ? "Image failed to load" : "No image available"}
                   </p>
                 </div>
               )}
             </div>
             
-            {/* Content section - redesigned with better spacing and typography */}
+            {/* Content section */}
             <div className="p-6 md:p-10 border-t border-gray-100 bg-white">
-              <h1 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">{displayPhoto.image_name}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">{photo.image_name}</h1>
               
               <div className="flex flex-wrap text-sm md:text-base text-gray-600 mb-10 border-b border-gray-100 pb-6">
                 <span className="mr-8 mb-3 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  {formatDate(displayPhoto.created_at)}
+                  {formatDate(photo.created_at)}
                 </span>
                 
                 <span className="mr-8 mb-3 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
-                  {displayPhoto.image_type.charAt(0).toUpperCase() + displayPhoto.image_type.slice(1)}
+                  {photo.image_type.charAt(0).toUpperCase() + photo.image_type.slice(1)}
                 </span>
                 
-                {displayPhoto.location && (
+                {photo.location && (
                   <span className="mb-3 flex items-center">
                     <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    {displayPhoto.location}
+                    {photo.location}
                   </span>
                 )}
               </div>
               
               <div className="prose prose-lg max-w-none mb-12">
                 <p className="text-gray-700 leading-relaxed">
-                  {displayPhoto.image_story}
+                  {photo.image_story}
                 </p>
               </div>
               
-              {(displayPhoto.camera || displayPhoto.lens || displayPhoto.settings) && (
+              {(photo.camera || photo.lens || photo.settings) && (
                 <div className="bg-gray-50 rounded-lg p-6 mb-4">
                   <h3 className="text-xl font-semibold mb-4 text-gray-900 flex items-center">
                     <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -299,7 +283,7 @@ export default function PhotoDetailPage() {
                     Technical Details
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {displayPhoto.camera && (
+                    {photo.camera && (
                       <div className="flex items-start">
                         <div className="bg-white p-2 rounded-md shadow-sm mr-3">
                           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,12 +292,12 @@ export default function PhotoDetailPage() {
                         </div>
                         <div>
                           <span className="font-medium block text-gray-900 text-sm">Camera</span>
-                          <span className="text-gray-600">{displayPhoto.camera}</span>
+                          <span className="text-gray-600">{photo.camera}</span>
                         </div>
                       </div>
                     )}
                     
-                    {displayPhoto.lens && (
+                    {photo.lens && (
                       <div className="flex items-start">
                         <div className="bg-white p-2 rounded-md shadow-sm mr-3">
                           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,12 +307,12 @@ export default function PhotoDetailPage() {
                         </div>
                         <div>
                           <span className="font-medium block text-gray-900 text-sm">Lens</span>
-                          <span className="text-gray-600">{displayPhoto.lens}</span>
+                          <span className="text-gray-600">{photo.lens}</span>
                         </div>
                       </div>
                     )}
                     
-                    {displayPhoto.settings && (
+                    {photo.settings && (
                       <div className="flex items-start">
                         <div className="bg-white p-2 rounded-md shadow-sm mr-3">
                           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,7 +322,7 @@ export default function PhotoDetailPage() {
                         </div>
                         <div>
                           <span className="font-medium block text-gray-900 text-sm">Settings</span>
-                          <span className="text-gray-600">{displayPhoto.settings}</span>
+                          <span className="text-gray-600">{photo.settings}</span>
                         </div>
                       </div>
                     )}
@@ -358,34 +342,15 @@ export default function PhotoDetailPage() {
                 More Like This
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {displayRelatedPhotos.map((relatedPhoto) => (
+                {relatedPhotos.map((relatedPhoto) => (
                   <Link key={relatedPhoto.id} href={`/photo/${relatedPhoto.id}`} className="block">
                     <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
-                      <div className="relative overflow-hidden flex items-center justify-center" style={{ minHeight: '200px' }}>
+                      <div className="relative overflow-hidden h-48">
                         {(relatedPhoto.image_thumbnail_url || relatedPhoto.image_url) ? (
                           <img
                             src={relatedPhoto.image_thumbnail_url || relatedPhoto.image_url}
                             alt={relatedPhoto.image_name}
                             className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                            style={{ aspectRatio: 'auto' }}
-                            onLoad={(e) => {
-                              // Dynamically adjust container height based on aspect ratio
-                              const img = e.target;
-                              const aspectRatio = img.naturalWidth / img.naturalHeight;
-                              
-                              // For landscape images, limit height
-                              if (aspectRatio > 1.3) {
-                                e.target.parentElement.style.height = '220px';
-                              } 
-                              // For portrait images, give more height
-                              else if (aspectRatio < 0.8) {
-                                e.target.parentElement.style.height = '300px';
-                              }
-                              // For square-ish images
-                              else {
-                                e.target.parentElement.style.height = '250px';
-                              }
-                            }}
                             onError={(e) => {
                               e.target.onerror = null;
                               e.target.parentElement.innerHTML = '<div class="w-full h-full bg-gray-200 flex items-center justify-center"><span class="text-gray-400">No image available</span></div>';

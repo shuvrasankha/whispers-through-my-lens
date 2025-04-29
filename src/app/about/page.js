@@ -3,6 +3,11 @@ import Footer from "@/components/Footer";
 import Image from "next/image";
 import Link from "next/link";
 
+export const metadata = {
+  title: "About Me | Shuvrasankha Paul Photography",
+  description: "Learn about Shuvrasankha Paul's photography journey, philosophy, and approach to capturing memorable moments.",
+};
+
 export default function About() {
   return (
     <>
@@ -10,21 +15,24 @@ export default function About() {
       {/* Improved background and styling */}
       <main className="pt-28 md:pt-36 pb-12 md:pb-16 bg-gradient-to-b from-gray-50 to-white min-h-screen">
         <div className="max-w-6xl mx-auto px-4">
+          
+          {/* Page Title */}
+          <h1 className="text-4xl md:text-5xl font-bold text-center mb-16 pb-4 text-gray-900">About Me</h1>
 
           {/* Hero Section - Improved layout */}
           <section className="mb-16 md:mb-24 mt-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              {/* Image Column - Enhanced styling */}
-              <div className="relative w-3/5 md:w-1/2 aspect-square mx-auto lg:mx-0 order-1 lg:order-2">
-                {/* Updated background effect */}
-                <div className="absolute -inset-4 bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 rounded-lg blur-xl opacity-70 group-hover:opacity-80 transition duration-1000 animate-tilt"></div>
-                {/* Image container */}
-                <div className="relative w-full h-full rounded-lg overflow-hidden shadow-xl border-4 border-white hover:scale-105 transition-transform duration-300">
+              {/* Image Column - Enhanced styling with animations */}
+              <div className="relative w-3/5 md:w-1/2 aspect-square mx-auto lg:mx-0 order-1 lg:order-2 animate-fadeIn">
+                {/* Updated background effect with rotate animation */}
+                <div className="absolute -inset-4 bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 rounded-lg blur-xl opacity-70 group-hover:opacity-80 transition duration-1000 animate-gradientSpin"></div>
+                {/* Image container with enhanced animations */}
+                <div className="relative w-full h-full rounded-lg overflow-hidden shadow-xl border-4 border-white hover:scale-110 hover:rotate-2 transition-all duration-500 transform hover:shadow-2xl">
                   <Image
                     src="/images/me.jpg"
                     alt="Shuvrasankha Paul - Photographer"
                     fill
-                    className="object-cover"
+                    className="object-cover transition-all duration-700 hover:scale-105"
                     priority
                     sizes="(max-width: 1023px) 50vw, 30vw"
                   />

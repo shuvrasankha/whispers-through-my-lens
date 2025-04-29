@@ -55,25 +55,16 @@ export default function AdminPage() {
     const fetchMessages = async () => {
       try {
         setLoadingMessages(true)
-        console.log('Fetching messages from Supabase...')
         const { data, error } = await supabase
           .from('user_messages')
           .select('*')
           .order('created_at', { ascending: false })
         
         if (error) {
-          console.error('Error fetching messages:', error)
           throw error
         }
         
-        console.log('Messages fetched from database:', data)
-        console.log('Number of messages:', data ? data.length : 0)
-        if (data && data.length > 0) {
-          console.log('First message:', data[0])
-        }
-        
         setMessages(data || [])
-        console.log('Messages state set:', data)
       } catch (error) {
         console.error('Error fetching messages:', error)
         setMessageError('Failed to load messages. Please try again.')
@@ -126,7 +117,6 @@ export default function AdminPage() {
       if (photoData.image_url) {
         const mainPath = photoData.image_url.split('/').pop()
         if (mainPath) {
-          // Ignore errors here as it's not critical if storage delete fails
           await supabase.storage
             .from('images')
             .remove([`photos/${mainPath}`])
@@ -159,44 +149,11 @@ export default function AdminPage() {
     console.error(`Failed to load image for photo ID: ${photoId}`);
   }
 
-  // For demo purposes, create placeholder photos
-  const placeholderPhotos = [
-    {
-      id: 1,
-      image_name: 'Mountain Sunset',
-      image_story: 'A breathtaking sunset over the mountain ranges.',
-      image_url: 'https://source.unsplash.com/random/800x600/?mountain',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?mountain', 
-      image_type: 'landscape',
-      created_at: '2025-04-25T00:00:00Z'
-    },
-    {
-      id: 2,
-      image_name: 'Ocean Waves',
-      image_story: 'The hypnotic rhythm of ocean waves crashing on the shore.',
-      image_url: 'https://source.unsplash.com/random/800x600/?ocean',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?ocean',
-      image_type: 'landscape',
-      created_at: '2025-04-20T00:00:00Z'
-    },
-    {
-      id: 3,
-      image_name: 'Urban Portrait',
-      image_story: 'A captivating portrait amidst the urban landscape.',
-      image_url: 'https://source.unsplash.com/random/800x600/?portrait',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?portrait',
-      image_type: 'portrait',
-      created_at: '2025-04-15T00:00:00Z'
-    }
-  ]
-
-  const displayPhotos = photos.length > 0 ? photos : placeholderPhotos
-
   // Get all unique types
-  const types = ['all', ...new Set(displayPhotos.map(photo => photo.image_type))]
+  const types = ['all', ...new Set(photos.map(photo => photo.image_type))]
   
   // Filter photos based on active tab and search term
-  const filteredPhotos = displayPhotos.filter(photo => {
+  const filteredPhotos = photos.filter(photo => {
     const matchesType = activeTab === 'all' || photo.image_type === activeTab
     const matchesSearch = photo.image_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          (photo.image_story && photo.image_story.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -211,9 +168,9 @@ export default function AdminPage() {
 
   // Stats for dashboard
   const stats = [
-    { label: 'Total Photos', value: displayPhotos.length },
-    { label: 'Categories', value: new Set(displayPhotos.map(photo => photo.image_type)).size },
-    { label: 'Latest Upload', value: displayPhotos.length > 0 ? new Date(displayPhotos[0].created_at).toLocaleDateString() : 'N/A' }
+    { label: 'Total Photos', value: photos.length },
+    { label: 'Categories', value: new Set(photos.map(photo => photo.image_type)).size },
+    { label: 'Latest Upload', value: photos.length > 0 ? new Date(photos[0].created_at).toLocaleDateString() : 'N/A' }
   ]
 
   return (

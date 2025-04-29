@@ -7,6 +7,17 @@ import PhotoCard from '@/components/PhotoCard'
 import Loader from '@/components/Loader'
 import { supabase } from '@/lib/supabaseClient'
 
+// Category descriptions - moved out of the component for cleaner code
+const categoryDescriptions = {
+  all: "Every frame here holds a story — a silent whisper of light, emotion, and fleeting moments. These aren't just photographs; they're fragments of time I've paused, hoping you'll feel what I felt when I clicked the shutter.",
+  landscape: "Nature's grand canvas unfolds before my lens. These landscape photographs capture the breathtaking beauty of our world, from sweeping horizons to intimate natural details.",
+  portrait: "Faces tell stories words never could. In these portraits, I seek to capture not just appearances, but the essence of each subject — their spirit, their emotions, their unique human experience.",
+  street: "The rhythm of rural life unfolds in these frames. My photography captures the authentic moments of village existence — the simplicity, traditions, and timeless connections that define life away from the urban rush.",
+  wildlife: "The natural world in its most authentic form. These wildlife images represent moments of patience and privilege, capturing the beauty, behavior, and sometimes the vulnerability of creatures in their natural habitats.",
+  abstract: "Beyond the literal lies a world of shape, form, color, and texture. My abstract photography invites you to see differently — to find beauty in the unconventional and meaning in the ambiguous.",
+  architecture: "Buildings tell the stories of cultures, eras, and human ingenuity. My architectural photography explores the dialogue between space, light, and structure — revealing the soul and character behind seemingly static facades."
+}
+
 export default function Gallery() {
   const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -15,6 +26,10 @@ export default function Gallery() {
   const [categories, setCategories] = useState([
     { value: 'all', label: 'All Categories' }
   ])
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPhotos, setTotalPhotos] = useState(0)
+  const photosPerPage = 9 // Display 9 photos per page (3x3 grid)
 
   // Fetch unique categories from the database
   useEffect(() => {
@@ -25,70 +40,75 @@ export default function Gallery() {
           .select('image_type')
           .not('image_type', 'is', null)
         
-        if (error) {
-          throw error
-        }
+        if (error) throw error
         
         // Extract unique categories
         const uniqueCategories = [...new Set(data.map(item => item.image_type))]
-          .filter(Boolean) // Remove any falsy values
-          .sort() // Sort alphabetically
+          .filter(Boolean)
+          .sort()
           .map(category => ({
             value: category,
-            label: category.charAt(0).toUpperCase() + category.slice(1) // Capitalize first letter
+            label: category.charAt(0).toUpperCase() + category.slice(1)
           }));
         
-        // Keep "All Categories" at the beginning
         setCategories([
           { value: 'all', label: 'All Categories' },
           ...uniqueCategories
         ]);
       } catch (err) {
         console.error('Error fetching categories:', err)
-        // Don't set error state here as it would affect the photo gallery display
       }
     }
     
     fetchCategories()
   }, [])
 
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filter])
+
   useEffect(() => {
     const fetchPhotos = async () => {
       try {
         setLoading(true)
         
+        // First, get count for pagination
+        let countQuery = supabase
+          .from('image_details')
+          .select('id', { count: 'exact' })
+        
+        if (filter !== 'all') {
+          countQuery = countQuery.eq('image_type', filter)
+        }
+        
+        const { count, error: countError } = await countQuery
+        if (countError) throw countError
+        
+        setTotalPhotos(count || 0)
+        
+        // Then fetch the current page
         let query = supabase
           .from('image_details')
           .select('*')
         
-        // Apply ordering based on filter
+        // Apply ordering and filtering
         if (filter === 'all') {
-          // For "All Categories" apply random ordering
-          query = query.order('id', { ascending: false }) // Fetch all photos
+          query = query.order('id', { ascending: false })
         } else {
-          // For specific categories, maintain chronological order
           query = query.eq('image_type', filter)
             .order('created_at', { ascending: false })
         }
         
+        // Apply pagination
+        const from = (currentPage - 1) * photosPerPage
+        const to = from + photosPerPage - 1
+        query = query.range(from, to)
+        
         const { data, error } = await query
+        if (error) throw error
         
-        if (error) {
-          throw error
-        }
-        
-        // If "All Categories" is selected, shuffle the results for random display
-        if (filter === 'all' && data) {
-          // Fisher-Yates shuffle algorithm
-          const shuffled = [...data]
-          for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1))
-            ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-          }
-          setPhotos(shuffled)
-        } else {
-          setPhotos(data || [])
-        }
+        setPhotos(data || [])
       } catch (error) {
         setError('Failed to load photos. Please try again later.')
         console.error('Error fetching photos:', error)
@@ -98,74 +118,52 @@ export default function Gallery() {
     }
     
     fetchPhotos()
-  }, [filter])
+  }, [filter, currentPage, photosPerPage])
 
-  // For demo purposes, create placeholder photos
-  const placeholderPhotos = [
-    {
-      id: 1,
-      image_name: 'Mountain Sunset',
-      image_story: 'A breathtaking sunset over the mountain ranges.',
-      image_url: 'https://source.unsplash.com/random/800x600/?mountain',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?mountain',
-      image_type: 'landscape',
-      created_at: '2025-04-25T00:00:00Z'
-    },
-    {
-      id: 2,
-      image_name: 'Ocean Waves',
-      image_story: 'The hypnotic rhythm of ocean waves crashing on the shore.',
-      image_url: 'https://source.unsplash.com/random/800x600/?ocean',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?ocean',
-      image_type: 'landscape',
-      created_at: '2025-04-20T00:00:00Z'
-    },
-    {
-      id: 3,
-      image_name: 'Urban Portrait',
-      image_story: 'A captivating portrait amidst the urban landscape.',
-      image_url: 'https://source.unsplash.com/random/800x600/?portrait',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?portrait',
-      image_type: 'portrait',
-      created_at: '2025-04-15T00:00:00Z'
-    },
-    {
-      id: 4,
-      image_name: 'Wildlife in Motion',
-      image_story: 'Capturing the grace and beauty of wildlife in their natural habitat.',
-      image_url: 'https://source.unsplash.com/random/800x600/?wildlife',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?wildlife',
-      image_type: 'wildlife',
-      created_at: '2025-04-10T00:00:00Z'
-    },
-    {
-      id: 5,
-      image_name: 'City Lights',
-      image_story: 'The magical glow of city lights at twilight.',
-      image_url: 'https://source.unsplash.com/random/800x600/?city',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?city',
-      image_type: 'street',
-      created_at: '2025-04-05T00:00:00Z'
-    },
-    {
-      id: 6,
-      image_name: 'Abstract Patterns',
-      image_story: 'Finding art in unexpected places and patterns.',
-      image_url: 'https://source.unsplash.com/random/800x600/?abstract',
-      image_thumbnail_url: 'https://source.unsplash.com/random/400x300/?abstract',
-      image_type: 'abstract',
-      created_at: '2025-04-01T00:00:00Z'
+  // Calculate pagination information
+  const totalPages = Math.ceil(totalPhotos / photosPerPage)
+  
+  // Handle page changes
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      // Set the new page first
+      setCurrentPage(page)
+      
+      // Use a ref to the top of the gallery content for smoother scrolling
+      const galleryTop = document.getElementById('gallery-top')
+      if (galleryTop) {
+        galleryTop.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        })
+      } else {
+        // Fallback to window scroll if element not found
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        })
+      }
     }
-  ]
-
-  const displayPhotos = photos.length > 0 ? photos : placeholderPhotos
+  }
 
   return (
     <>
       <Navbar />
-      <main className="py-12 px-4 min-h-screen bg-white">
+      <main className="py-18 px-4 min-h-screen bg-white">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold mb-8 text-center text-gray-800">Photo Gallery</h1>
+          {/* Added ID for scroll targeting */}
+          <h1 id="gallery-top" className="text-3xl md:text-4xl font-bold mb-8 text-center text-gray-800">Photo Gallery</h1>
+          
+          {/* Description text - category specific */}
+          {categoryDescriptions[filter] && (
+            <div className="mb-10 text-center max-w-2xl mx-auto">
+              <p className="text-gray-700 text-lg font-light leading-relaxed tracking-wide">
+                <span className="text-2xl font-serif">"</span>
+                {categoryDescriptions[filter]}
+                <span className="text-2xl font-serif">"</span>
+              </p>
+            </div>
+          )}
           
           {/* Category Filter */}
           <div className="mb-8">
@@ -201,17 +199,112 @@ export default function Gallery() {
           ) : (
             /* Photo Grid */
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {displayPhotos.map((photo) => (
+              {photos.map((photo) => (
                 <PhotoCard key={photo.id} photo={photo} />
               ))}
             </div>
           )}
           
           {/* Empty State */}
-          {!loading && displayPhotos.length === 0 && (
+          {!loading && photos.length === 0 && (
             <div className="text-center text-gray-600 py-12 bg-gray-50 rounded-lg shadow-sm">
               <p className="text-xl">No photos found in this category.</p>
               <p className="mt-2">Try selecting a different category or check back later.</p>
+            </div>
+          )}
+          
+          {/* Pagination Controls */}
+          {!loading && totalPages > 1 && (
+            <div className="mt-12 flex flex-col items-center space-y-4">
+              <div className="text-gray-600">
+                Page {currentPage} of {totalPages} ({totalPhotos} photos total)
+              </div>
+              <div className="flex space-x-2">
+                {/* First page button */}
+                <button
+                  onClick={() => goToPage(1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-md ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  aria-label="First page"
+                >
+                  &laquo;
+                </button>
+                
+                {/* Previous page button */}
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-2 rounded-md ${
+                    currentPage === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  aria-label="Previous page"
+                >
+                  &lsaquo;
+                </button>
+                
+                {/* Page number buttons - show at most 5 pages */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  // Calculate which page numbers to show
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => goToPage(pageNum)}
+                      className={`px-3 py-2 rounded-md ${
+                        currentPage === pageNum
+                          ? 'bg-gray-800 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                
+                {/* Next page button */}
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-md ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  aria-label="Next page"
+                >
+                  &rsaquo;
+                </button>
+                
+                {/* Last page button */}
+                <button
+                  onClick={() => goToPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-2 rounded-md ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  aria-label="Last page"
+                >
+                  &raquo;
+                </button>
+              </div>
             </div>
           )}
         </div>
