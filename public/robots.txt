@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and login pages
+Disallow: /admin/
+Disallow: /login/
+
+# Sitemap location
+Sitemap: https://whispers-through-my-lens.netlify.app/api/sitemap
