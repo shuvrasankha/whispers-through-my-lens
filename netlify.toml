@@ -5,10 +5,13 @@
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "1"
   NEXT_PUBLIC_SITE_URL = "https://whispers-through-my-lens.netlify.app"
-  NODE_VERSION = "18.17.0"
+  NODE_VERSION = "20.9.0"  # Use a more recent Node.js version
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+  [plugins.inputs]
+    # Enable Next.js Edge Functions for Next.js 15+
+    nextjsFeatures = { images = true, appDir = true }
 
 # Redirects and headers for static files
 [[redirects]]
@@ -16,11 +19,5 @@
   to = "/images/:splat"
   status = 200
 
-# Add a wildcard redirect for client-side routing
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  
 # Non-sensitive environment variables can be added here
 # Sensitive ones should be added via the Netlify UI
