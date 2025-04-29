@@ -35,6 +35,7 @@ export default function About() {
                     className="object-cover transition-all duration-700 hover:scale-105"
                     priority
                     sizes="(max-width: 1023px) 50vw, 30vw"
+                    unoptimized={true}
                   />
                 </div>
               </div>
