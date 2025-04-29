@@ -8,5 +8,11 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Redirects and headers for static files
+[[redirects]]
+  from = "/images/*"
+  to = "/images/:splat"
+  status = 200
+
 # Non-sensitive environment variables can be added here
 # Sensitive ones should be added via the Netlify UI
