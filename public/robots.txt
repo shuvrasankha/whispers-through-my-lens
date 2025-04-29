@@ -6,4 +6,4 @@ Disallow: /admin/
 Disallow: /login/
 
 # Sitemap location
-Sitemap: https://whispers-through-my-lens.netlify.app/api/sitemap
+Sitemap: https://whispers-through-my-lens.netlify.app/api/sitemap.xml

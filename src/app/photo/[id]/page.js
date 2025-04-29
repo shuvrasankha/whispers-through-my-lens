@@ -3,9 +3,70 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import Head from 'next/head'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabaseClient'
+
+// Metadata generator component for SEO
+const PhotoPageMetadata = ({ photo }) => {
+  if (!photo) return null;
+  
+  const title = `${photo.image_name} | Whispers Through My Lens`;
+  const description = photo.image_story ? 
+    (photo.image_story.length > 155 ? photo.image_story.substring(0, 155) + '...' : photo.image_story) 
+    : `Beautiful ${photo.image_type} photography by Whispers Through My Lens`;
+  
+  let structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Photograph",
+    "name": photo.image_name,
+    "description": photo.image_story,
+    "image": photo.image_url,
+    "dateCreated": photo.created_at,
+    "author": {
+      "@type": "Person",
+      "name": "Whispers Through My Lens"
+    }
+  };
+
+  if (photo.location) {
+    structuredData.contentLocation = {
+      "@type": "Place",
+      "name": photo.location
+    };
+  }
+  
+  const jsonLD = JSON.stringify(structuredData);
+  
+  return (
+    <Head>
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      
+      {/* Open Graph Tags */}
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      {photo.image_url && <meta property="og:image" content={photo.image_url} />}
+      <meta property="og:type" content="article" />
+      
+      {/* Twitter Tags */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+      {photo.image_url && <meta name="twitter:image" content={photo.image_url} />}
+      
+      {/* Structured Data */}
+      <script 
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLD }}
+      />
+      
+      {/* Keywords */}
+      <meta name="keywords" content={`photography, ${photo.image_type}, ${photo.location || ''}, portfolio, artistic photography`} />
+    </Head>
+  );
+};
 
 // Util function for formatting dates - moved outside component
 const formatDate = (dateString) => {
@@ -210,6 +271,7 @@ export default function PhotoDetailPage() {
   return (
     <>
       <Navbar />
+      <PhotoPageMetadata photo={photo} />
       <main className="bg-white min-h-screen py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Single card containing image and details */}
