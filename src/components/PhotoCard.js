@@ -22,18 +22,18 @@ export default function PhotoCard({ photo }) {
             </div>
           )}
           
-          {photo.image_url && !imageError ? (
+          {(photo.image_thumbnail_url || photo.image_url) && !imageError ? ( // Check for thumbnail first
             <Image
-              src={photo.image_url}
+              src={photo.image_thumbnail_url || photo.image_url} // Use thumbnail URL if available, otherwise fallback to main URL
               alt={photo.image_name}
               fill
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" // Adjusted sizes for better optimization across breakpoints
               loading="lazy"
               fetchPriority="auto"
               className={`object-cover rounded-md transition-opacity duration-300 will-change-transform ${
                 imageLoading ? 'opacity-0' : 'opacity-100'
               }`}
-              unoptimized={photo.image_url.startsWith('http')}
+              unoptimized={(photo.image_thumbnail_url || photo.image_url)?.startsWith('http')} // Check the actual URL used
               onLoadingComplete={() => setImageLoading(false)}
               onError={(e) => {
                 console.error("Image load error:", e);

@@ -215,7 +215,7 @@ export default function PhotoDetailPage() {
           {/* Single card containing image and details */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-16">
             {/* Image section */}
-            <div className="w-full relative bg-gray-50 overflow-hidden">
+            <div className="w-full relative bg-white overflow-hidden">
               {photo.image_url && !imageError ? (
                 <div className="flex justify-center items-center py-10 px-4 md:px-8">
                   <img
@@ -367,7 +367,8 @@ export default function PhotoDetailPage() {
                         <h3 className="text-lg font-semibold text-gray-900 mb-2">{relatedPhoto.image_name}</h3>
                         <p className="text-gray-600 mb-4 text-sm line-clamp-2 flex-grow">{relatedPhoto.image_story}</p>
                         
-                        <div className="mt-auto">
+                        {/* Increased top padding with pt-4 class */}
+                        <div className="mt-auto pt-8">
                           <span className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
                             View Details
                             <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

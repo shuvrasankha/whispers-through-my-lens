@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import PhotoForm from '@/components/PhotoForm'
 import PhotoEditForm from '@/components/PhotoEditForm'
 import Loader from '@/components/Loader'
@@ -176,9 +174,9 @@ export default function AdminPage() {
   return (
     <AuthGuard>
       <div className="flex flex-col min-h-screen bg-gray-50">
-        <Navbar />
+        {/* <Navbar /> */}
         
-        <main className="flex-grow py-8 px-4">
+        <main className="flex-grow py-12 px-4">
           <div className="max-w-7xl mx-auto">
             {/* Dashboard Header */}
             <div className="bg-white rounded-xl shadow-md p-6 mb-8">
@@ -728,7 +726,7 @@ export default function AdminPage() {
           </div>
         </main>
         
-        <Footer />
+        {/* <Footer /> */}
       </div>
     </AuthGuard>
   )
