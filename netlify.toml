@@ -7,3 +7,6 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Non-sensitive environment variables can be added here
+# Sensitive ones should be added via the Netlify UI
