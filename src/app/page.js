@@ -12,21 +12,21 @@ import Loader from "@/components/Loader";
 const fallbackPhotos = [
   {
     id: "1",
-    image_url: "/images/hero.jpg", // Using the available local image
+    image_url: "https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//hero.jpg", // Using Supabase storage URL
     image_name: "Sunset Silhouettes",
     image_story: "Children playing by the waterfront at sunset, creating beautiful silhouettes against the vibrant evening sky.",
     image_type: "Landscape"
   },
   {
     id: "2",
-    image_url: "/images/hero.jpg", // Using the same image as placeholder
+    image_url: "https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//hero.jpg", // Using Supabase storage URL
     image_name: "Golden Hour",
     image_story: "The magical moment when daylight softens, creating a warm golden glow that transforms ordinary scenes into extraordinary memories.",
     image_type: "Nature"
   },
   {
     id: "3",
-    image_url: "/images/hero.jpg", // Using the same image as placeholder
+    image_url: "https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//hero.jpg", // Using Supabase storage URL
     image_name: "Evening Tranquility",
     image_story: "A peaceful moment captured as the day comes to an end, showcasing the harmony between nature and human existence.",
     image_type: "Sunset"
@@ -108,12 +108,13 @@ export default function Home() {
               <div className="hidden md:block absolute -bottom-6 -right-6 w-32 h-32 bg-gray-200 rounded-full opacity-50 z-0"></div>
               <div className="px-4 sm:px-8 lg:px-0">
                 <Image
-                  src="/images/hero.jpg"
+                  src="https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//hero.jpg"
                   alt="Photography showcase"
                   width={800}
                   height={600}
                   priority
                   className="rounded-lg shadow-xl z-10 relative hover:transform hover:scale-[1.02] transition-transform duration-300 w-full"
+                  unoptimized={true}
                 />
               </div>
             </div>

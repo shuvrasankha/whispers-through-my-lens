@@ -29,7 +29,7 @@ export default function About() {
                 {/* Image container with enhanced animations */}
                 <div className="relative w-full h-full rounded-lg overflow-hidden shadow-xl border-4 border-white hover:scale-110 hover:rotate-2 transition-all duration-500 transform hover:shadow-2xl">
                   <Image
-                    src="/images/me.jpg"
+                    src="https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//me.jpg"
                     alt="Shuvrasankha Paul - Photographer"
                     fill
                     className="object-cover transition-all duration-700 hover:scale-105"
