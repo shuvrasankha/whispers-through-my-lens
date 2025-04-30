@@ -64,7 +64,7 @@ export default function Contact() {
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center text-gray-800">Get In Touch</h1>
           
           <p className="text-gray-600 text-center mb-10 max-w-2xl mx-auto">
-            I'd love to hear from you! Whether you're interested in my photography services, have a question about my work, or just want to say hello - use the form below to reach out.
+            I'd love to hear from you! Whether you're interested in my photography, have a question about my work, or just want to say hello - use the form below to reach out.
           </p>
           
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden p-8 md:p-10">
@@ -108,7 +108,7 @@ export default function Contact() {
                         onChange={handleChange}
                         required
                         className="w-full px-4 py-3 text-black bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
-                        placeholder="John Doe"
+                        
                       />
                     </div>
                     
@@ -124,7 +124,7 @@ export default function Contact() {
                         onChange={handleChange}
                         required
                         className="w-full px-4 py-3 text-black bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
-                        placeholder="john@example.com"
+                        
                       />
                     </div>
                   </div>
@@ -141,7 +141,7 @@ export default function Contact() {
                       required
                       rows="6"
                       className="w-full px-4 py-3 text-black bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
-                      placeholder="I'm interested in discussing a potential project..."
+                      
                     ></textarea>
                   </div>
                   

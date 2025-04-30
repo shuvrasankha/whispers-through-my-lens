@@ -43,16 +43,21 @@ export default function Home() {
       try {
         setLoading(true);
         
+        // Get featured photos
         const { data, error } = await supabase
           .from('image_details')
           .select('*')
           .eq('feature_flag', true)
-          .order('created_at', { ascending: false })
-          .limit(6); // Reduced from 50 to 6 since we only need 6 photos max
+          .limit(100); // Get a larger set to randomize from
         
         if (error) throw error;
         
-        setFeaturedPhotos(data?.length > 0 ? data : fallbackPhotos);
+        // Client-side randomization
+        const randomizedData = data && data.length > 0 
+          ? data.sort(() => Math.random() - 0.5).slice(0, 6) 
+          : fallbackPhotos;
+          
+        setFeaturedPhotos(randomizedData);
       } catch (err) {
         console.error('Error fetching featured photos:', err);
         setError(err.message);
@@ -98,9 +103,6 @@ export default function Home() {
                 <Link href="/gallery" className="px-5 py-2 md:px-6 md:py-3 bg-gray-900 text-white font-medium rounded-lg shadow-md hover:bg-gray-800 transition-colors text-sm md:text-base lg:text-lg">
                   Explore Gallery
                 </Link>
-                <Link href="/contact" className="px-5 py-2 md:px-6 md:py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors text-sm md:text-base lg:text-lg">
-                  Contact Me
-                </Link>
               </div>
             </div>
             <div className="lg:w-1/2 relative mt-10 lg:mt-0">
@@ -113,7 +115,7 @@ export default function Home() {
                   width={800}
                   height={600}
                   priority
-                  className="rounded-lg shadow-xl z-10 relative hover:transform hover:scale-[1.02] transition-transform duration-300 w-full"
+                  className="rounded-lg shadow-xl z-10 relative hover:transform hover:scale-[1.02] transition-transform duration-300 w-full animate-fadeIn"
                   unoptimized={true}
                 />
               </div>
