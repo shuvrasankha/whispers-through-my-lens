@@ -9,12 +9,15 @@ export default function PhotoEditForm({ photo, onSuccess, onCancel }) {
   const [formData, setFormData] = useState({
     image_name: photo.image_name || '',
     image_story: photo.image_story || '',
-    image_type: photo.image_type || ''
+    image_type: photo.image_type || '',
+    feature_flag: photo.feature_flag || false
   })
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    // For checkbox inputs, use the checked property instead of value
+    const newValue = type === 'checkbox' ? checked : value
+    setFormData(prev => ({ ...prev, [name]: newValue }))
   }
 
   const handleSubmit = async (e) => {
@@ -36,6 +39,7 @@ export default function PhotoEditForm({ photo, onSuccess, onCancel }) {
           image_name: formData.image_name,
           image_story: formData.image_story,
           image_type: formData.image_type,
+          feature_flag: formData.feature_flag
         })
         .eq('id', photo.id)
 
@@ -118,6 +122,20 @@ export default function PhotoEditForm({ photo, onSuccess, onCancel }) {
               <option key={type} value={type} className="text-gray-900">{type.charAt(0).toUpperCase() + type.slice(1)}</option>
             ))}
           </select>
+        </div>
+        
+        <div className="mb-4 flex items-center">
+          <input
+            type="checkbox"
+            id="feature_flag"
+            name="feature_flag"
+            checked={formData.feature_flag}
+            onChange={handleChange}
+            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+          />
+          <label htmlFor="feature_flag" className="ml-2 block text-sm text-gray-700">
+            Feature this image (displayed prominently on the site)
+          </label>
         </div>
         
         <div className="flex justify-end gap-3 mt-6">
