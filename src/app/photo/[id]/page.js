@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabaseClient'
+import PhotoCard from '@/components/PhotoCard'
 
 // Util function for formatting dates - moved outside component
 const formatDate = (dateString) => {
@@ -88,6 +90,14 @@ export default function PhotoDetailPage() {
   const [error, setError] = useState(null)
   const [relatedPhotos, setRelatedPhotos] = useState([])
   const [imageError, setImageError] = useState(false)
+  const [imageLoading, setImageLoading] = useState(true)
+  
+  // Generate a blur placeholder based on photo name
+  const [blurDataURL, setBlurDataURL] = useState('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"%3E%3Crect width="1" height="1" fill="hsl(0,0%,90%25)"%3E%3C/rect%3E%3C/svg%3E')
+  
+  // Create refs for intersection observers
+  const mainImageRef = useRef(null)
+  const relatedSectionRef = useRef(null)
 
   useEffect(() => {
     const fetchPhoto = async () => {
@@ -104,6 +114,20 @@ export default function PhotoDetailPage() {
         
         if (data) {
           setPhoto(data)
+          
+          // Generate a pastel color based on photo name
+          if (data.image_name) {
+            const hash = data.image_name.split('').reduce((acc, char) => {
+              return acc + char.charCodeAt(0);
+            }, 0);
+            
+            const h = hash % 360;
+            const s = 20 + (hash % 30); // Between 20-50% saturation
+            const l = 85 + (hash % 10); // Between 85-95% lightness
+            
+            setBlurDataURL(`data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='hsl(${h},${s}%25,${l}%25)'/%3E%3C/svg%3E`);
+          }
+          
           // Fetch related photos
           fetchRelatedPhotos(data)
         }
@@ -173,6 +197,37 @@ export default function PhotoDetailPage() {
     }
   }, [id])
 
+  // Set up intersection observer for related photos section
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'IntersectionObserver' in window && relatedSectionRef.current) {
+      const options = {
+        rootMargin: '200px',
+        threshold: 0.1
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            // Pre-load related photo images when scrolling close to them
+            const lazyImages = document.querySelectorAll('.lazy-related-image');
+            lazyImages.forEach(img => {
+              // Check if data-src attribute exists and hasn't been loaded yet
+              if (img.dataset.src && img.getAttribute('src') !== img.dataset.src) {
+                img.src = img.dataset.src;
+              }
+            });
+            
+            observer.disconnect();
+          }
+        });
+      }, options);
+      
+      observer.observe(relatedSectionRef.current);
+      
+      return () => observer.disconnect();
+    }
+  }, [relatedPhotos]);
+
   // Only show related photos if we actually have some
   const hasRelatedPhotos = relatedPhotos.length > 0
 
@@ -214,15 +269,40 @@ export default function PhotoDetailPage() {
         <div className="max-w-6xl mx-auto">
           {/* Single card containing image and details */}
           <div className="bg-white rounded-xl shadow-md overflow-hidden mb-16">
-            {/* Image section */}
+            {/* Image section with lazy loading optimization */}
             <div className="w-full relative bg-white overflow-hidden">
               {photo.image_url && !imageError ? (
-                <div className="flex justify-center items-center py-10 px-4 md:px-8">
+                <div 
+                  ref={mainImageRef} 
+                  className="flex justify-center items-center py-10 px-4 md:px-8"
+                  style={{
+                    backgroundColor: imageLoading ? 'transparent' : '#fff',
+                    backgroundImage: imageLoading ? `url(${blurDataURL})` : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    minHeight: imageLoading ? '40vh' : 'auto'
+                  }}
+                >
+                  {/* Loading spinner */}
+                  {imageLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center z-10">
+                      <div className="w-16 h-16 rounded-full border-4 border-white border-t-gray-300 animate-spin opacity-80"></div>
+                    </div>
+                  )}
+                  
+                  {/* Progressive loading for main image */}
                   <img
                     src={photo.image_url}
                     alt={photo.image_name}
-                    className="max-w-full max-h-[80vh] object-contain shadow-md rounded"
-                    onError={() => setImageError(true)}
+                    className={`max-w-full max-h-[80vh] object-contain shadow-md rounded transition-all duration-700 ${
+                      imageLoading ? 'opacity-0 scale-[0.98] blur-xl' : 'opacity-100 scale-100 blur-0'
+                    }`}
+                    onLoad={() => setImageLoading(false)}
+                    onError={() => {
+                      setImageError(true);
+                      setImageLoading(false);
+                    }}
+                    loading="eager" // Load this image immediately since it's the main content
                   />
                 </div>
               ) : (
@@ -239,7 +319,7 @@ export default function PhotoDetailPage() {
             
             {/* Content section */}
             <div className="p-6 md:p-10 border-t border-gray-100 bg-white">
-              <h1 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">{photo.image_name}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">{photo.image_name}</h1>
               
               <div className="flex flex-wrap text-sm md:text-base text-gray-600 mb-10 border-b border-gray-100 pb-6">
                 <span className="mr-8 mb-3 flex items-center">
@@ -334,7 +414,7 @@ export default function PhotoDetailPage() {
           
           {/* Related Photos Section - Only displayed when similar photos exist */}
           {hasRelatedPhotos && (
-            <div className="mt-16">
+            <div className="mt-16" ref={relatedSectionRef}>
               <h2 className="text-2xl font-bold mb-6 text-gray-900 flex items-center">
                 <svg className="w-6 h-6 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
@@ -343,42 +423,7 @@ export default function PhotoDetailPage() {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {relatedPhotos.map((relatedPhoto) => (
-                  <Link key={relatedPhoto.id} href={`/photo/${relatedPhoto.id}`} className="block">
-                    <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 h-full flex flex-col transform hover:-translate-y-1">
-                      <div className="relative overflow-hidden h-48">
-                        {(relatedPhoto.image_thumbnail_url || relatedPhoto.image_url) ? (
-                          <img
-                            src={relatedPhoto.image_thumbnail_url || relatedPhoto.image_url}
-                            alt={relatedPhoto.image_name}
-                            className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.parentElement.innerHTML = '<div class="w-full h-full bg-gray-200 flex items-center justify-center"><span class="text-gray-400">No image available</span></div>';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-400">No image available</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="p-5 flex-grow flex flex-col">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{relatedPhoto.image_name}</h3>
-                        <p className="text-gray-600 mb-4 text-sm line-clamp-2 flex-grow">{relatedPhoto.image_story}</p>
-                        
-                        {/* Increased top padding with pt-4 class */}
-                        <div className="mt-auto pt-8">
-                          <span className="inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
-                            View Details
-                            <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                  <PhotoCard key={relatedPhoto.id} photo={relatedPhoto} />
                 ))}
               </div>
             </div>

@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useEffect, useState } from "react";
+import PhotoCard from "@/components/PhotoCard"; // Import the PhotoCard component
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Loader from "@/components/Loader";
 
@@ -37,6 +38,37 @@ export default function Home() {
   const [featuredPhotos, setFeaturedPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Create a ref for lazy loading the hero image
+  const heroRef = useRef(null);
+  const [heroInView, setHeroInView] = useState(false);
+
+  // Set up intersection observer for hero image
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'IntersectionObserver' in window && heroRef.current) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            setHeroInView(true);
+            observer.disconnect();
+          }
+        },
+        {
+          rootMargin: '50px',
+          threshold: 0.1,
+        }
+      );
+
+      observer.observe(heroRef.current);
+      return () => observer.disconnect();
+    } else {
+      // Fallback for browsers without IntersectionObserver
+      setHeroInView(true);
+    }
+  }, []);
+
+  // Dynamic blur data URL for hero image
+  const heroBlurDataURL = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='hsl(210,30%,90%25)'/%3E%3C/svg%3E";
 
   useEffect(() => {
     async function fetchFeaturedPhotos() {
@@ -108,13 +140,15 @@ export default function Home() {
             <div className="lg:w-1/2 relative mt-10 lg:mt-0">
               <div className="hidden md:block absolute -top-6 -left-6 w-32 h-32 bg-gray-100 rounded-full opacity-50 z-0"></div>
               <div className="hidden md:block absolute -bottom-6 -right-6 w-32 h-32 bg-gray-200 rounded-full opacity-50 z-0"></div>
-              <div className="px-4 sm:px-8 lg:px-0">
+              <div ref={heroRef} className="px-4 sm:px-8 lg:px-0">
                 <Image
                   src="https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//hero.jpg"
                   alt="Photography showcase"
                   width={800}
                   height={600}
-                  priority
+                  priority={true}
+                  placeholder="blur"
+                  blurDataURL={heroBlurDataURL}
                   className="rounded-lg shadow-xl z-10 relative hover:transform hover:scale-[1.02] transition-transform duration-300 w-full animate-fadeIn"
                   unoptimized={true}
                 />
@@ -149,44 +183,31 @@ export default function Home() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
-                {featuredPhotos.map((photo) => (
-                  <div key={photo.id} className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300 border border-gray-100 group">
-                    <Link href={`/photo/${photo.id}`} className="block">
-                      <div className="relative overflow-hidden h-48 sm:h-64">
-                        {photo.image_url ? (
-                          <Image
-                            src={photo.image_url}
-                            alt={photo.image_name}
-                            width={600}
-                            height={400}
-                            className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                            unoptimized={photo.image_url.startsWith('http')}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-500">No image available</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4 sm:p-6">
-                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2">{photo.image_name}</h3>
-                        <p className="text-sm sm:text-base text-gray-600 mb-4 line-clamp-2">{photo.image_story}</p>
-                        <span className="inline-block px-3 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm bg-gray-100 text-gray-700 rounded-lg font-medium">
-                          {typeof photo.image_type === 'string' 
-                            ? photo.image_type.charAt(0).toUpperCase() + photo.image_type.slice(1) 
-                            : 'Unknown'}
-                        </span>
-                      </div>
-                    </Link>
-                  </div>
+                {featuredPhotos.map((photo, index) => (
+                  <PhotoCard 
+                    key={photo.id} 
+                    photo={photo} 
+                    featured={index < 3} // Prioritize loading for first 3 photos
+                  />
                 ))}
               </div>
             )}
             
-            <div className="text-center mt-10 md:mt-16">
-              <Link href="/gallery" className="inline-block px-6 py-3 md:px-8 md:py-4 bg-gray-900 text-white font-medium rounded-lg shadow-md hover:bg-gray-800 transition-colors text-base md:text-lg w-full sm:w-auto max-w-xs mx-auto">
+            <div className="text-center mt-10 md:mt-16 flex flex-col sm:flex-row justify-center items-center gap-4">
+              <Link href="/gallery" className="inline-block px-6 py-3 md:px-8 md:py-4 bg-gray-900 text-white font-medium rounded-lg shadow-md hover:bg-gray-800 transition-colors text-base md:text-lg w-full sm:w-auto max-w-xs">
                 View Full Gallery
               </Link>
+              <a 
+                href="https://www.pexels.com/@shuvrasankha/gallery/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-6 py-3 md:px-8 md:py-4 bg-gray-900 bg-opacity-80 text-white font-medium rounded-lg shadow-md hover:bg-opacity-100 transition-all duration-300 text-base md:text-lg w-full sm:w-auto max-w-xs group"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 group-hover:translate-y-[2px] transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download Photos
+              </a>
             </div>
           </div>
         </section>

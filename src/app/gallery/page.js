@@ -20,8 +20,6 @@ const categoryDescriptions = {
 
 export default function Gallery() {
   const [photos, setPhotos] = useState([])
-  const [featuredPhotos, setFeaturedPhotos] = useState([])
-  const [loadingFeatured, setLoadingFeatured] = useState(true)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [filter, setFilter] = useState('all')
@@ -122,31 +120,6 @@ export default function Gallery() {
     fetchPhotos()
   }, [filter, currentPage, photosPerPage])
 
-  // Fetch featured photos
-  useEffect(() => {
-    const fetchFeaturedPhotos = async () => {
-      try {
-        setLoadingFeatured(true)
-        
-        const { data, error } = await supabase
-          .from('image_details')
-          .select('*')
-          .eq('feature_flag', true)
-          .order('created_at', { ascending: false })
-        
-        if (error) throw error
-        
-        setFeaturedPhotos(data || [])
-      } catch (error) {
-        console.error('Error fetching featured photos:', error)
-      } finally {
-        setLoadingFeatured(false)
-      }
-    }
-    
-    fetchFeaturedPhotos()
-  }, [])
-
   // Calculate pagination information
   const totalPages = Math.ceil(totalPhotos / photosPerPage)
   
@@ -180,22 +153,6 @@ export default function Gallery() {
         <div className="max-w-7xl mx-auto">
           {/* Added ID for scroll targeting */}
           <h1 id="gallery-top" className="text-3xl md:text-4xl font-bold mb-8 text-center text-gray-800">Photo Gallery</h1>
-          
-          {/* Featured Photos Section */}
-          {!loadingFeatured && featuredPhotos.length > 0 && (
-            <div className="mb-16">
-              <h2 className="text-2xl md:text-3xl font-bold mb-6 text-center text-gray-800">
-                <span className="inline-block border-b-2 border-gray-800 pb-1">Featured Photos</span>
-              </h2>
-              <div className="bg-gray-50 p-6 rounded-xl shadow-sm">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {featuredPhotos.map((photo) => (
-                    <PhotoCard key={photo.id} photo={photo} featured={true} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
           
           {/* Description text - category specific */}
           {categoryDescriptions[filter] && (
