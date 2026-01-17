@@ -3,6 +3,18 @@ import Footer from "@/components/Footer";
 import Image from "next/image";
 import Link from "next/link";
 
+// Helper to build Netlify Image CDN URL for server components
+function getOptimizedUrl(url, options = {}) {
+  const params = new URLSearchParams();
+  params.append('url', url);
+  if (options.width) params.append('w', options.width.toString());
+  if (options.height) params.append('h', options.height.toString());
+  if (options.fit) params.append('fit', options.fit);
+  if (options.format) params.append('fm', options.format);
+  if (options.quality) params.append('q', options.quality.toString());
+  return `/.netlify/images?${params.toString()}`;
+}
+
 export const metadata = {
   title: "About Me | Shuvrasankha Paul Photography",
   description: "Learn about Shuvrasankha Paul's photography journey, philosophy, and approach to capturing memorable moments.",
@@ -29,13 +41,15 @@ export default function About() {
                 {/* Image container with enhanced animations */}
                 <div className="relative w-full h-full rounded-lg overflow-hidden shadow-xl border-4 border-white hover:scale-110 hover:rotate-2 transition-all duration-500 transform hover:shadow-2xl">
                   <Image
-                    src="https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//me.jpg"
+                    src={getOptimizedUrl(
+                      "https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//me.jpg",
+                      { width: 600, height: 600, fit: 'cover', format: 'webp', quality: 80 }
+                    )}
                     alt="Shuvrasankha Paul - Photographer"
                     fill
                     className="object-cover transition-all duration-700 hover:scale-105"
                     priority
                     sizes="(max-width: 1023px) 50vw, 30vw"
-                    unoptimized={true}
                   />
                 </div>
               </div>

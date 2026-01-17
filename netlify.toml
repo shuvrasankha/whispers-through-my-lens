@@ -10,6 +10,10 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
+# Enable Netlify Image CDN for Supabase storage images
+[images]
+  remote_images = ["https://yywgadreuosyccwcjmil.supabase.co/.*"]
+
 # Redirects and headers for static files
 [[redirects]]
   from = "/images/*"

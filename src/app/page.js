@@ -8,6 +8,7 @@ import PhotoCard from "@/components/PhotoCard"; // Import the PhotoCard componen
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Loader from "@/components/Loader";
+import { getOptimizedImageUrl } from "@/lib/imageOptimizer";
 
 // Sample featured photos data to use as fallback
 const fallbackPhotos = [
@@ -142,7 +143,16 @@ export default function Home() {
               <div className="hidden md:block absolute -bottom-6 -right-6 w-32 h-32 bg-gray-200 rounded-full opacity-50 z-0"></div>
               <div ref={heroRef} className="px-4 sm:px-8 lg:px-0">
                 <Image
-                  src="https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//hero.jpg"
+                  src={getOptimizedImageUrl(
+                    "https://yywgadreuosyccwcjmil.supabase.co/storage/v1/object/public/static-photos//hero.jpg",
+                    {
+                      width: 1200,
+                      height: 800,
+                      fit: 'cover',
+                      format: 'webp',
+                      quality: 85
+                    }
+                  )}
                   alt="Photography showcase"
                   width={800}
                   height={600}
@@ -150,7 +160,6 @@ export default function Home() {
                   placeholder="blur"
                   blurDataURL={heroBlurDataURL}
                   className="rounded-lg shadow-xl z-10 relative hover:transform hover:scale-[1.02] transition-transform duration-300 w-full animate-fadeIn"
-                  unoptimized={true}
                 />
               </div>
             </div>
