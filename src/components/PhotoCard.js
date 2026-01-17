@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { getOptimizedImageUrl } from '@/lib/imageOptimizer'
 
 export default function PhotoCard({ photo, featured = false }) {
   const [imageError, setImageError] = useState(false);
@@ -11,6 +12,18 @@ export default function PhotoCard({ photo, featured = false }) {
   const [blurDataURL, setBlurDataURL] = useState('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HgAFeAJc0IL8FwAAAABJRU5ErkJggg=='); // Default tiny transparent placeholder
   // Track if component is in viewport
   const [isInViewport, setIsInViewport] = useState(false);
+
+  // Get the source image URL
+  const sourceUrl = photo.image_thumbnail_url || photo.image_url;
+
+  // Generate optimized image URL using Netlify Image CDN
+  const optimizedImageUrl = sourceUrl ? getOptimizedImageUrl(sourceUrl, {
+    width: 400,
+    height: 300,
+    fit: 'cover',
+    format: 'webp',
+    quality: 75
+  }) : null;
 
   // Generate color-based placeholder from image name
   useEffect(() => {
@@ -81,9 +94,9 @@ export default function PhotoCard({ photo, featured = false }) {
           )}
           
           {/* Only render the image if it's in/near the viewport or already loaded */}
-          {((photo.image_thumbnail_url || photo.image_url) && !imageError && (isInViewport || !imageLoading)) ? (
+          {(optimizedImageUrl && !imageError && (isInViewport || !imageLoading)) ? (
             <Image
-              src={photo.image_thumbnail_url || photo.image_url}
+              src={optimizedImageUrl}
               alt={photo.image_name}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -94,7 +107,6 @@ export default function PhotoCard({ photo, featured = false }) {
               className={`object-cover rounded-md transition-all duration-500 will-change-transform ${
                 imageLoading ? 'scale-105 opacity-0 blur-md' : 'scale-100 opacity-100 blur-0'
               }`}
-              unoptimized={(photo.image_thumbnail_url || photo.image_url)?.startsWith('http')}
               onLoad={() => setImageLoading(false)}
               onError={(e) => {
                 console.error("Image load error:", e);
