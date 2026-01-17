@@ -14,14 +14,15 @@ export default function PhotoForm({ onSuccess }) {
     image_name: '',
     image_story: '',
     image_type: '',
-    image_file: null
+    image_file: null,
+    feature_flag: false
   })
   const [previewUrl, setPreviewUrl] = useState(null)
   
   const fileInputRef = useRef(null)
 
   const handleChange = (e) => {
-    const { name, value, files } = e.target
+    const { name, value, files, type, checked } = e.target
     
     if (name === 'image_file' && files && files[0]) {
       // Handle image file upload
@@ -40,6 +41,9 @@ export default function PhotoForm({ onSuccess }) {
         setPreviewUrl(e.target.result)
       }
       fileReader.readAsDataURL(file)
+    } else if (type === 'checkbox') {
+      // Handle checkbox inputs
+      setFormData(prev => ({ ...prev, [name]: checked }))
     } else {
       // Handle other form fields
       setFormData(prev => ({ ...prev, [name]: value }))
@@ -113,6 +117,7 @@ export default function PhotoForm({ onSuccess }) {
           image_story: formData.image_story,
           image_type: formData.image_type,
           image_url: imageUrl,
+          feature_flag: formData.feature_flag
         })
 
       if (insertError) {
@@ -124,7 +129,8 @@ export default function PhotoForm({ onSuccess }) {
         image_name: '', 
         image_story: '', 
         image_type: '',
-        image_file: null
+        image_file: null,
+        feature_flag: false
       })
       setPreviewUrl(null)
       setUploadProgress(0)
@@ -212,6 +218,20 @@ export default function PhotoForm({ onSuccess }) {
               <option key={type} value={type} className="text-gray-900">{type.charAt(0).toUpperCase() + type.slice(1)}</option>
             ))}
           </select>
+        </div>
+        
+        <div className="mb-4 flex items-center">
+          <input
+            type="checkbox"
+            id="feature_flag"
+            name="feature_flag"
+            checked={formData.feature_flag}
+            onChange={handleChange}
+            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+          />
+          <label htmlFor="feature_flag" className="ml-2 block text-sm text-gray-700">
+            Feature this image (displayed prominently on the site)
+          </label>
         </div>
         
         <div className="mb-6">

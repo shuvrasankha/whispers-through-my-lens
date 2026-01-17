@@ -14,10 +14,13 @@ export default function AdminPage() {
   const router = useRouter()
   const [photos, setPhotos] = useState([])
   const [messages, setMessages] = useState([])
+  const [featureFlags, setFeatureFlags] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(true)
+  const [loadingFeatureFlags, setLoadingFeatureFlags] = useState(true)
   const [error, setError] = useState(null)
   const [messageError, setMessageError] = useState(null)
+  const [featureFlagError, setFeatureFlagError] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [activeDashboardTab, setActiveDashboardTab] = useState('photos')
@@ -27,6 +30,8 @@ export default function AdminPage() {
   const [editingPhoto, setEditingPhoto] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const photosPerPage = 6;
+  const [showFeatureFlagForm, setShowFeatureFlagForm] = useState(false);
+  const [newFeatureFlag, setNewFeatureFlag] = useState({ name: '', enabled: false, description: '' });
 
   useEffect(() => {
     const fetchPhotos = async () => {
@@ -71,8 +76,32 @@ export default function AdminPage() {
       }
     }
     
+    const fetchFeatureFlags = async () => {
+      try {
+        setLoadingFeatureFlags(true)
+        // Update this function to fetch featured photos from image_details table instead
+        const { data, error } = await supabase
+          .from('image_details')
+          .select('*')
+          .eq('feature_flag', true)
+          .order('created_at', { ascending: false })
+        
+        if (error) {
+          throw error
+        }
+        
+        setFeatureFlags(data || [])
+      } catch (error) {
+        console.error('Error fetching featured photos:', error)
+        setFeatureFlagError('Failed to load featured photos. Please try again.')
+      } finally {
+        setLoadingFeatureFlags(false)
+      }
+    }
+    
     fetchPhotos()
     fetchMessages()
+    fetchFeatureFlags()
   }, [])
 
   const handleSignOut = async () => {
@@ -145,6 +174,80 @@ export default function AdminPage() {
       [photoId]: true
     }));
     console.error(`Failed to load image for photo ID: ${photoId}`);
+  }
+
+  // Feature Flag Management Functions
+  const handleToggleFeatureFlag = async (flagId, currentStatus) => {
+    try {
+      const { error } = await supabase
+        .from('feature_flags')
+        .update({ enabled: !currentStatus })
+        .eq('id', flagId)
+        
+      if (error) throw error
+      
+      // Update the state to reflect the change
+      setFeatureFlags(featureFlags.map(flag => 
+        flag.id === flagId ? { ...flag, enabled: !flag.enabled } : flag
+      ))
+    } catch (error) {
+      console.error('Error toggling feature flag:', error)
+      setFeatureFlagError('Failed to update feature flag. Please try again.')
+    }
+  }
+
+  const handleDeleteFeatureFlag = async (flagId) => {
+    if (!window.confirm('Are you sure you want to delete this feature flag?')) {
+      return
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('feature_flags')
+        .delete()
+        .eq('id', flagId)
+      
+      if (error) throw error
+      
+      // Update the state
+      setFeatureFlags(featureFlags.filter(flag => flag.id !== flagId))
+    } catch (error) {
+      console.error('Error deleting feature flag:', error)
+      setFeatureFlagError('Failed to delete feature flag. Please try again.')
+    }
+  }
+
+  const handleAddFeatureFlag = async (e) => {
+    e.preventDefault()
+    if (!newFeatureFlag.name || !newFeatureFlag.description) {
+      setFeatureFlagError('Name and description are required.')
+      return
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('feature_flags')
+        .insert([
+          { 
+            name: newFeatureFlag.name, 
+            description: newFeatureFlag.description,
+            enabled: newFeatureFlag.enabled
+          }
+        ])
+        .select()
+      
+      if (error) throw error
+      
+      // Add new flag to state
+      setFeatureFlags([...featureFlags, data[0]])
+      // Reset form
+      setNewFeatureFlag({ name: '', enabled: false, description: '' })
+      // Hide form
+      setShowFeatureFlagForm(false)
+    } catch (error) {
+      console.error('Error adding feature flag:', error)
+      setFeatureFlagError('Failed to add feature flag. Please try again.')
+    }
   }
 
   // Get all unique types
@@ -255,6 +358,21 @@ export default function AdminPage() {
                         {messages.length}
                       </span>
                     )}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveDashboardTab('feature_flags')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeDashboardTab === 'feature_flags' 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clipRule="evenodd" />
+                    </svg>
+                    Feature Flags
                   </span>
                 </button>
               </div>
@@ -592,6 +710,157 @@ export default function AdminPage() {
                               ))}
                             </tbody>
                           </table>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Feature Flags Management Section */}
+            {activeDashboardTab === 'feature_flags' && (
+              <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                <div className="p-6 border-b">
+                  <h2 className="text-xl font-semibold text-gray-900">Featured Photos</h2>
+                  <p className="text-gray-700 mt-1">Manage which photos are featured on your site</p>
+                </div>
+                
+                {/* Feature Photos Header */}
+                <div className="p-4 bg-gray-50 border-b">
+                  <div className="flex justify-between items-center">
+                    <div className="relative w-full md:w-64">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Search featured photos..."
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-600 focus:border-indigo-600 bg-white text-gray-800"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Error Message */}
+                {featureFlagError && (
+                  <div className="m-6 p-4 bg-red-50 text-red-700 rounded-lg border border-red-300 flex items-center gap-3 font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {featureFlagError}
+                  </div>
+                )}
+                
+                {/* Loading State */}
+                {loadingFeatureFlags ? (
+                  <div className="h-64 flex items-center justify-center">
+                    <Loader />
+                  </div>
+                ) : (
+                  <>
+                    {/* Featured Photos Grid */}
+                    <div className="p-6">
+                      {featureFlags.length === 0 ? (
+                        <div className="text-center py-12 text-gray-700">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <p className="text-lg font-medium">No featured photos found</p>
+                          <p className="mt-1">Use the photo editor to feature photos on your site</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {featureFlags
+                            .filter(photo => 
+                              photo.image_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                              photo.image_story?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              photo.image_type?.toLowerCase().includes(searchTerm.toLowerCase())
+                            )
+                            .map((photo) => (
+                              <div 
+                                key={photo.id} 
+                                className="bg-white rounded-lg border overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                              >
+                                <div className="aspect-w-16 aspect-h-9 w-full relative bg-gray-100">
+                                  {photo.image_url && !imageErrors[photo.id] ? (
+                                    <img 
+                                      src={photo.image_url} 
+                                      alt={photo.image_name}
+                                      className="w-full h-48 object-cover"
+                                      onError={() => handleImageError(photo.id)}
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-48 bg-gray-200 flex items-center justify-center flex-col">
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                      </svg>
+                                      <p className="text-xs text-gray-600 mt-2 font-medium">Image failed to load</p>
+                                    </div>
+                                  )}
+                                  <div className="absolute top-2 right-2">
+                                    <span className="inline-block px-2 py-1 text-xs font-medium bg-black text-white rounded uppercase">
+                                      {photo.image_type}
+                                    </span>
+                                  </div>
+                                  <div className="absolute top-2 left-2">
+                                    <span className="inline-block px-2 py-1 text-xs font-medium bg-indigo-600 text-white rounded">
+                                      Featured
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="p-4">
+                                  <h3 className="font-medium text-gray-900 truncate">{photo.image_name}</h3>
+                                  <p className="text-sm text-gray-700 mt-1 line-clamp-2">{photo.image_story}</p>
+                                  <div className="flex items-center justify-between mt-3">
+                                    <span className="text-xs text-gray-600 font-medium">{new Date(photo.created_at).toLocaleDateString()}</span>
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => {
+                                          setEditingPhoto(photo);
+                                        }}
+                                        className="inline-flex items-center justify-center p-1.5 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            const { error } = await supabase
+                                              .from('image_details')
+                                              .update({ feature_flag: false })
+                                              .eq('id', photo.id);
+                                            
+                                            if (error) throw error;
+                                            
+                                            // Update the featured photos list
+                                            setFeatureFlags(featureFlags.filter(p => p.id !== photo.id));
+                                            
+                                          } catch (error) {
+                                            console.error('Error removing featured flag:', error);
+                                            setFeatureFlagError('Failed to update photo. Please try again.');
+                                          }
+                                        }}
+                                        className="inline-flex items-center justify-center p-1.5 bg-red-50 text-red-700 rounded-full hover:bg-red-100"
+                                        title="Remove from featured"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          }
                         </div>
                       )}
                     </div>
