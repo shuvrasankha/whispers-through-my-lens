@@ -36,3 +36,8 @@ yarn-error.log*
 
 # Supabase
 .supabase
+
+# Netlify build artifacts
+.netlify/edge-functions/
+.netlify/functions-internal/
+.netlify/cache/
