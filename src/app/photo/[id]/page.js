@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import { supabase } from '@/lib/supabaseClient'
 import PhotoCard from '@/components/PhotoCard'
+import { getOptimizedImageUrl } from '@/lib/imageOptimizer'
 
 // Util function for formatting dates - moved outside component
 const formatDate = (dateString) => {
@@ -272,8 +273,8 @@ export default function PhotoDetailPage() {
             {/* Image section with lazy loading optimization */}
             <div className="w-full relative bg-white overflow-hidden">
               {photo.image_url && !imageError ? (
-                <div 
-                  ref={mainImageRef} 
+                <div
+                  ref={mainImageRef}
                   className="flex justify-center items-center py-10 px-4 md:px-8"
                   style={{
                     backgroundColor: imageLoading ? 'transparent' : '#fff',
@@ -289,10 +290,15 @@ export default function PhotoDetailPage() {
                       <div className="w-16 h-16 rounded-full border-4 border-white border-t-gray-300 animate-spin opacity-80"></div>
                     </div>
                   )}
-                  
-                  {/* Progressive loading for main image */}
+
+                  {/* Progressive loading for main image - using Netlify Image CDN */}
                   <img
-                    src={photo.image_url}
+                    src={getOptimizedImageUrl(photo.image_url, {
+                      width: 1600,
+                      fit: 'contain',
+                      format: 'webp',
+                      quality: 85
+                    })}
                     alt={photo.image_name}
                     className={`max-w-full max-h-[80vh] object-contain shadow-md rounded transition-all duration-700 ${
                       imageLoading ? 'opacity-0 scale-[0.98] blur-xl' : 'opacity-100 scale-100 blur-0'
@@ -302,7 +308,7 @@ export default function PhotoDetailPage() {
                       setImageError(true);
                       setImageLoading(false);
                     }}
-                    loading="eager" // Load this image immediately since it's the main content
+                    loading="eager"
                   />
                 </div>
               ) : (
