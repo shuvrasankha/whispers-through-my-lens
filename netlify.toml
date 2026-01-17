@@ -1,9 +1,10 @@
 [build]
-  command = "npm run build"
+  command = "rm -rf node_modules && npm ci && npm run build"
   publish = ".next"
 
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "1"
+  NPM_FLAGS = "--prefer-offline"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

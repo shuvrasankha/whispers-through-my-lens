@@ -95,7 +95,7 @@ export default function PhotoCard({ photo, featured = false }) {
                 imageLoading ? 'scale-105 opacity-0 blur-md' : 'scale-100 opacity-100 blur-0'
               }`}
               unoptimized={(photo.image_thumbnail_url || photo.image_url)?.startsWith('http')}
-              onLoadingComplete={() => setImageLoading(false)}
+              onLoad={() => setImageLoading(false)}
               onError={(e) => {
                 console.error("Image load error:", e);
                 setImageError(true);
